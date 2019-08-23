@@ -16,7 +16,10 @@ func main() {
 		panic(err)
 	}
 
-	http.HandleFunc("/", hello)
+	http.HandleFunc("/products", HandleProducts)
+	http.HandleFunc("/products/", HandleProduct)
+
+	http.HandleFunc("/", handleNotFound)
 
 	err = http.ListenAndServe(":"+port, nil)
 	if err != nil {
@@ -24,6 +27,6 @@ func main() {
 	}
 }
 
-func hello(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello, World!"))
+func handleNotFound(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "Not found", http.StatusNotFound)
 }
