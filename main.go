@@ -11,8 +11,17 @@ func main() {
 		port = "3000"
 	}
 
+	err := InitDB()
+	if err != nil {
+		panic(err)
+	}
+
 	http.HandleFunc("/", hello)
-	http.ListenAndServe(":"+port, nil)
+
+	err = http.ListenAndServe(":"+port, nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
