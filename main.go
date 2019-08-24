@@ -16,17 +16,13 @@ func main() {
 		panic(err)
 	}
 
-	http.HandleFunc("/products", HandleProducts)
-	http.HandleFunc("/products/", HandleProduct)
+	router := NewRouter()
 
-	http.HandleFunc("/", handleNotFound)
+	router.Handle("/products", Handlers{http.MethodGet: GetProducts})
+	router.Handle("/products/", Handlers{http.MethodGet: GetProduct})
 
-	err = http.ListenAndServe(":"+port, nil)
+	err = http.ListenAndServe(":"+port, router)
 	if err != nil {
 		panic(err)
 	}
-}
-
-func handleNotFound(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not found", http.StatusNotFound)
 }

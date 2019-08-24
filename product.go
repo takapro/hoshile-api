@@ -12,33 +12,7 @@ type Product struct {
 	ImageUrl string  `json:"imageUrl"`
 }
 
-func HandleProducts(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		getProducts(w)
-
-	case http.MethodOptions:
-		HandleOptions(w)
-
-	default:
-		http.Error(w, "Bad request", http.StatusBadRequest)
-	}
-}
-
-func HandleProduct(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		getProduct(w, r)
-
-	case http.MethodOptions:
-		HandleOptions(w)
-
-	default:
-		http.Error(w, "Bad request", http.StatusBadRequest)
-	}
-}
-
-func getProducts(w http.ResponseWriter) {
+func GetProducts(w http.ResponseWriter, r *http.Request) {
 	arr, err := SelectProducts()
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
@@ -48,7 +22,7 @@ func getProducts(w http.ResponseWriter) {
 	WriteJson(w, arr)
 }
 
-func getProduct(w http.ResponseWriter, r *http.Request) {
+func GetProduct(w http.ResponseWriter, r *http.Request) {
 	id, err := ParseUrlParam(r.URL.Path)
 	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
