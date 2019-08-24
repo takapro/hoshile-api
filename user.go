@@ -35,7 +35,25 @@ func UserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, user, err := AuthUser(p.Email, p.Password)
+	id, user, err := AuthUser(p.Email, p.Password)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	user.Session = NewSession(id)
+
+	WriteJson(w, user)
+}
+
+func GetProfile(w http.ResponseWriter, r *http.Request) {
+	id, ok := FindSession(r)
+	if !ok {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	user, err := SelectUser(id)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
