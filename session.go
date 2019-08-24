@@ -25,12 +25,17 @@ func NewSession(id int) string {
 	return session
 }
 
-func FindSession(r *http.Request) (int, bool) {
+func FindSession(r *http.Request) (int, string, bool) {
 	auth := r.Header.Get("Authorization")
 	if !strings.HasPrefix(auth, "Bearer ") {
-		return 0, false
+		return 0, "", false
 	}
 
 	session := strings.TrimPrefix(auth, "Bearer ")
-	return c.Get(session)
+	id, ok := c.Get(session)
+	if !ok {
+		return 0, "", false
+	}
+
+	return id, session, true
 }

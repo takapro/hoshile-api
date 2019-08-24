@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
@@ -35,7 +37,7 @@ func UserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, user, err := AuthUser(p.Email, p.Password)
+	user, id, err := AuthUser(0, p.Email, p.Password)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
@@ -46,18 +48,120 @@ func UserLogin(w http.ResponseWriter, r *http.Request) {
 	WriteJson(w, user)
 }
 
+func UserSignup(w http.ResponseWriter, r *http.Request) {
+	var p userParams
+	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil || p.Name == "" || p.Email == "" || p.Password == "" {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	id, err := InsertUser(p.Name, p.Email, p.Password)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	writeUser(w, id, NewSession(id))
+}
+
 func GetProfile(w http.ResponseWriter, r *http.Request) {
-	id, ok := FindSession(r)
+	id, session, ok := FindSession(r)
 	if !ok {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
+	writeUser(w, id, session)
+}
+
+func PutProfile(w http.ResponseWriter, r *http.Request) {
+	id, session, ok := FindSession(r)
+	if !ok {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	var p userParams
+	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil || p.Name == "" || p.Email == "" {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	err := UpdateUser(id, map[string]string{"name": p.Name, "email": p.Email})
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	writeUser(w, id, session)
+}
+
+func PutPassword(w http.ResponseWriter, r *http.Request) {
+	id, session, ok := FindSession(r)
+	if !ok {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	var p passwordParams
+	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil || p.CurPassword == "" || p.NewPassword == "" {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(p.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	user, id, err := AuthUser(id, "", p.CurPassword)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	err = UpdateUser(id, map[string]string{"password": string(hash)})
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	user.Session = session
+
+	WriteJson(w, user)
+}
+
+func PutShoppingCart(w http.ResponseWriter, r *http.Request) {
+	id, session, ok := FindSession(r)
+	if !ok {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	var p shoppingCartParams
+	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	err := UpdateUser(id, map[string]string{"shoppingCart": p.ShoppingCart})
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	writeUser(w, id, session)
+}
+
+func writeUser(w http.ResponseWriter, id int, session string) {
 	user, err := SelectUser(id)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
+
+	user.Session = session
 
 	WriteJson(w, user)
 }

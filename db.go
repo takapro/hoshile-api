@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"os"
+	"strings"
 
 	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
@@ -80,21 +81,67 @@ func SelectUser(id int) (*User, error) {
 	return &u, nil
 }
 
-func AuthUser(email string, password string) (int, *User, error) {
-	row := db.QueryRow("select id, name, email, password, shoppingCart, isAdmin = b'1' from Users where email = ?", email)
+func AuthUser(id int, email string, password string) (*User, int, error) {
+	query := "select id, name, email, password, shoppingCart, isAdmin = b'1' from Users where "
+	var row *sql.Row
+	if email == "" {
+		row = db.QueryRow(query+"id = ?", id)
+	} else {
+		row = db.QueryRow(query+"email = ?", email)
+	}
 
 	var u User
-	var id int
 	var hash string
 	err := row.Scan(&id, &u.Name, &u.Email, &hash, &u.ShoppingCart, &u.IsAdmin)
 	if err != nil {
-		return 0, nil, err
+		return nil, 0, err
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {
-		return 0, nil, err
+		return nil, 0, err
 	}
 
-	return id, &u, nil
+	return &u, id, nil
+}
+
+func InsertUser(name, email, password string) (int, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return 0, err
+	}
+
+	result, err := db.Exec("insert into User (name, email, password) values (?, ?, ?)", name, email, hash)
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := result.LastInsertId()
+	return int(id), err
+}
+
+func UpdateUser(id int, kv map[string]string) error {
+	keys := []string{}
+	values := []interface{}{}
+	for k, v := range kv {
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	values = append(values, id)
+
+	query := "update Users set " + strings.Join(keys, " = ?, ") + " = ? where id = ?"
+	result, err := db.Exec(query, values...)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }

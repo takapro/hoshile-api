@@ -24,7 +24,10 @@ func main() {
 	router.Handle("/products/", Handlers{http.MethodGet: GetProduct})
 
 	router.Handle("/user/login", Handlers{http.MethodPost: UserLogin})
-	router.Handle("/user/profile", Handlers{http.MethodGet: GetProfile})
+	router.Handle("/user/signup", Handlers{http.MethodPost: UserSignup})
+	router.Handle("/user/profile", Handlers{http.MethodGet: GetProfile, http.MethodPut: PutProfile})
+	router.Handle("/user/password", Handlers{http.MethodPut: PutPassword})
+	router.Handle("/user/shoppingCart", Handlers{http.MethodPut: PutShoppingCart})
 
 	err = http.ListenAndServe(":"+port, router)
 	if err != nil {
