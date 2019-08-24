@@ -29,6 +29,9 @@ func main() {
 	router.Handle("/user/password", Handlers{http.MethodPut: PutPassword})
 	router.Handle("/user/shoppingCart", Handlers{http.MethodPut: PutShoppingCart})
 
+	router.Handle("/orders", Handlers{http.MethodGet: GetOrders, http.MethodPost: PostOrder})
+	router.Handle("/orders/", Handlers{http.MethodGet: GetOrder})
+
 	err = http.ListenAndServe(":"+port, router)
 	if err != nil {
 		panic(err)

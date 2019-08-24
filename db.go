@@ -51,6 +51,7 @@ func SelectProducts() ([]Product, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		arr = append(arr, p)
 	}
 
@@ -144,4 +145,79 @@ func UpdateUser(id int, kv map[string]string) error {
 	}
 
 	return nil
+}
+
+func SelectOrderHeads(userId int) ([]OrderHead, error) {
+	rows, err := db.Query("select id, userId, createDate from OrderHeads where userId = ?", userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	arr := []OrderHead{}
+	for rows.Next() {
+		var o OrderHead
+		err = rows.Scan(&o.Id, &o.UserId, &o.CreateDate)
+		if err != nil {
+			return nil, err
+		}
+
+		arr = append(arr, o)
+	}
+
+	return arr, nil
+}
+
+func SelectOrderHead(id int) (*OrderHead, error) {
+	row := db.QueryRow("select id, userId, createDate from OrderHeads where id = ?", id)
+
+	var o OrderHead
+	err := row.Scan(&o.Id, &o.UserId, &o.CreateDate)
+	if err != nil {
+		return nil, err
+	}
+
+	return &o, nil
+}
+
+func SelectOrderDetails(orderId int) ([]OrderDetail, error) {
+	rows, err := db.Query("select id, orderId, productId, quantity from OrderDetails where orderId = ?", orderId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	arr := []OrderDetail{}
+	for rows.Next() {
+		var d OrderDetail
+		err = rows.Scan(&d.Id, &d.OrderId, &d.ProductId, &d.Quantity)
+		if err != nil {
+			return nil, err
+		}
+
+		arr = append(arr, d)
+	}
+
+	return arr, nil
+}
+
+func InsertOrder(userId int, params []OrderParams) (int, error) {
+	result, err := db.Exec("insert into OrderHeads (userId, createDate) values (?, now())", userId)
+	if err != nil {
+		return 0, err
+	}
+
+	orderId, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	for _, p := range params {
+		_, err := db.Exec("insert into OrderDetails (orderId, productId, quantity) values (?, ?, ?)", orderId, p.ProductId, p.Quantity)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return int(orderId), nil
 }
