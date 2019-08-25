@@ -25,10 +25,6 @@ type OrderParams struct {
 	Quantity  int `json:"quantity"`
 }
 
-type orderIdParams struct {
-	Id int `json:"id"`
-}
-
 func GetOrders(w http.ResponseWriter, r *http.Request) {
 	userId, _, ok := FindSession(r)
 	if !ok {
@@ -42,14 +38,14 @@ func GetOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, order := range orders {
-		details, err := getDetails(order.Id)
+	for i := range orders {
+		details, err := getDetails(orders[i].Id)
 		if err != nil {
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
 
-		order.Details = details
+		orders[i].Details = details
 	}
 
 	WriteJson(w, orders)
@@ -62,13 +58,13 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var p orderIdParams
-	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil {
+	orderId, err := ParseUrlParam(r.URL.Path)
+	if err != nil {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	order, err := SelectOrderHead(p.Id)
+	order, err := SelectOrderHead(orderId)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
@@ -78,7 +74,7 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	details, err := getDetails(order.Id)
+	details, err := getDetails(orderId)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
@@ -117,13 +113,13 @@ func getDetails(orderId int) ([]OrderDetail, error) {
 		return nil, err
 	}
 
-	for _, detail := range details {
-		product, err := SelectProduct(detail.ProductId)
+	for i := range details {
+		product, err := SelectProduct(details[i].ProductId)
 		if err != nil {
 			return nil, err
 		}
 
-		detail.Product = product
+		details[i].Product = product
 	}
 
 	return details, nil

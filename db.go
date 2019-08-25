@@ -74,9 +74,14 @@ func SelectUser(id int) (*User, error) {
 	row := db.QueryRow("select name, email, shoppingCart, isAdmin = b'1' from Users where id = ?", id)
 
 	var u User
-	err := row.Scan(&u.Name, &u.Email, &u.ShoppingCart, &u.IsAdmin)
+	var shoppingCart sql.NullString
+	err := row.Scan(&u.Name, &u.Email, &shoppingCart, &u.IsAdmin)
 	if err != nil {
 		return nil, err
+	}
+
+	if shoppingCart.Valid {
+		u.ShoppingCart = shoppingCart.String
 	}
 
 	return &u, nil
@@ -93,7 +98,8 @@ func AuthUser(id int, email string, password string) (*User, int, error) {
 
 	var u User
 	var hash string
-	err := row.Scan(&id, &u.Name, &u.Email, &hash, &u.ShoppingCart, &u.IsAdmin)
+	var shoppingCart sql.NullString
+	err := row.Scan(&id, &u.Name, &u.Email, &hash, &shoppingCart, &u.IsAdmin)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -101,6 +107,10 @@ func AuthUser(id int, email string, password string) (*User, int, error) {
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {
 		return nil, 0, err
+	}
+
+	if shoppingCart.Valid {
+		u.ShoppingCart = shoppingCart.String
 	}
 
 	return &u, id, nil
@@ -112,7 +122,7 @@ func InsertUser(name, email, password string) (int, error) {
 		return 0, err
 	}
 
-	result, err := db.Exec("insert into User (name, email, password) values (?, ?, ?)", name, email, hash)
+	result, err := db.Exec("insert into Users (name, email, password) values (?, ?, ?)", name, email, hash)
 	if err != nil {
 		return 0, err
 	}
@@ -131,20 +141,8 @@ func UpdateUser(id int, kv map[string]string) error {
 	values = append(values, id)
 
 	query := "update Users set " + strings.Join(keys, " = ?, ") + " = ? where id = ?"
-	result, err := db.Exec(query, values...)
-	if err != nil {
-		return err
-	}
-
-	rows, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if rows == 0 {
-		return sql.ErrNoRows
-	}
-
-	return nil
+	_, err := db.Exec(query, values...)
+	return err
 }
 
 func SelectOrderHeads(userId int) ([]OrderHead, error) {
