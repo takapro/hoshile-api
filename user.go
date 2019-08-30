@@ -8,7 +8,7 @@ import (
 )
 
 type User struct {
-	Session      string `json:"session"`
+	Token        string `json:"token"`
 	Name         string `json:"name"`
 	Email        string `json:"email"`
 	ShoppingCart string `json:"shoppingCart"`
@@ -43,7 +43,7 @@ func UserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.Session = NewSession(id)
+	user.Token = NewSession(id)
 
 	WriteJson(w, user)
 }
@@ -65,17 +65,17 @@ func UserSignup(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetProfile(w http.ResponseWriter, r *http.Request) {
-	id, session, ok := FindSession(r)
+	id, token, ok := FindSession(r)
 	if !ok {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
 
-	writeUser(w, id, session)
+	writeUser(w, id, token)
 }
 
 func PutProfile(w http.ResponseWriter, r *http.Request) {
-	id, session, ok := FindSession(r)
+	id, token, ok := FindSession(r)
 	if !ok {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
@@ -93,11 +93,11 @@ func PutProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeUser(w, id, session)
+	writeUser(w, id, token)
 }
 
 func PutPassword(w http.ResponseWriter, r *http.Request) {
-	id, session, ok := FindSession(r)
+	id, token, ok := FindSession(r)
 	if !ok {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
@@ -127,13 +127,13 @@ func PutPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user.Session = session
+	user.Token = token
 
 	WriteJson(w, user)
 }
 
 func PutShoppingCart(w http.ResponseWriter, r *http.Request) {
-	id, session, ok := FindSession(r)
+	id, token, ok := FindSession(r)
 	if !ok {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
@@ -151,17 +151,17 @@ func PutShoppingCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeUser(w, id, session)
+	writeUser(w, id, token)
 }
 
-func writeUser(w http.ResponseWriter, id int, session string) {
+func writeUser(w http.ResponseWriter, id int, token string) {
 	user, err := SelectUser(id)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 
-	user.Session = session
+	user.Token = token
 
 	WriteJson(w, user)
 }

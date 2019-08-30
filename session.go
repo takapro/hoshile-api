@@ -20,9 +20,9 @@ func NewSession(id int) string {
 		return ""
 	}
 
-	session := strings.TrimRight(base64.URLEncoding.EncodeToString(buf), "=")
-	c.Set(session, id)
-	return session
+	token := strings.TrimRight(base64.URLEncoding.EncodeToString(buf), "=")
+	c.Set(token, id)
+	return token
 }
 
 func FindSession(r *http.Request) (int, string, bool) {
@@ -31,11 +31,11 @@ func FindSession(r *http.Request) (int, string, bool) {
 		return 0, "", false
 	}
 
-	session := strings.TrimPrefix(auth, "Bearer ")
-	id, ok := c.Get(session)
+	token := strings.TrimPrefix(auth, "Bearer ")
+	id, ok := c.Get(token)
 	if !ok {
 		return 0, "", false
 	}
 
-	return id, session, true
+	return id, token, true
 }
