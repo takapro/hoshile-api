@@ -12,28 +12,15 @@ type Product struct {
 	ImageUrl string  `json:"imageUrl"`
 }
 
-func GetProducts(w http.ResponseWriter, r *http.Request) {
-	arr, err := SelectProducts()
-	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	WriteJson(w, arr)
+func GetProducts(r *http.Request) (interface{}, error) {
+	return SelectProducts()
 }
 
-func GetProduct(w http.ResponseWriter, r *http.Request) {
+func GetProduct(r *http.Request) (interface{}, error) {
 	id, err := ParseUrlParam(r.URL.Path)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
-	p, err := SelectProduct(id)
-	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	WriteJson(w, p)
+	return SelectProduct(id)
 }

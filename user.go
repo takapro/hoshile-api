@@ -30,138 +30,121 @@ type shoppingCartParams struct {
 	ShoppingCart string `json:"shoppingCart"`
 }
 
-func UserLogin(w http.ResponseWriter, r *http.Request) {
+func UserLogin(r *http.Request) (interface{}, error) {
 	var p userParams
 	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil || p.Email == "" || p.Password == "" {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	user, id, err := AuthUser(0, p.Email, p.Password)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	user.Token = NewSession(id)
 
-	WriteJson(w, user)
+	return user, nil
 }
 
-func UserSignup(w http.ResponseWriter, r *http.Request) {
+func UserSignup(r *http.Request) (interface{}, error) {
 	var p userParams
 	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil || p.Name == "" || p.Email == "" || p.Password == "" {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	id, err := InsertUser(p.Name, p.Email, p.Password)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
-	writeUser(w, id, NewSession(id))
+	return getUser(id, NewSession(id))
 }
 
-func GetProfile(w http.ResponseWriter, r *http.Request) {
+func GetProfile(r *http.Request) (interface{}, error) {
 	id, token, ok := FindSession(r)
 	if !ok {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
-	writeUser(w, id, token)
+	return getUser(id, token)
 }
 
-func PutProfile(w http.ResponseWriter, r *http.Request) {
+func PutProfile(r *http.Request) (interface{}, error) {
 	id, token, ok := FindSession(r)
 	if !ok {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	var p userParams
 	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil || p.Name == "" || p.Email == "" {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	err := UpdateUser(id, map[string]string{"name": p.Name, "email": p.Email})
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
-	writeUser(w, id, token)
+	return getUser(id, token)
 }
 
-func PutPassword(w http.ResponseWriter, r *http.Request) {
+func PutPassword(r *http.Request) (interface{}, error) {
 	id, token, ok := FindSession(r)
 	if !ok {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	var p passwordParams
 	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil || p.CurPassword == "" || p.NewPassword == "" {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(p.NewPassword), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, err
 	}
 
 	user, id, err := AuthUser(id, "", p.CurPassword)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	err = UpdateUser(id, map[string]string{"password": string(hash)})
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	user.Token = token
 
-	WriteJson(w, user)
+	return user, nil
 }
 
-func PutShoppingCart(w http.ResponseWriter, r *http.Request) {
+func PutShoppingCart(r *http.Request) (interface{}, error) {
 	id, token, ok := FindSession(r)
 	if !ok {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	var p shoppingCartParams
 	if r.Body == nil || json.NewDecoder(r.Body).Decode(&p) != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	err := UpdateUser(id, map[string]string{"shoppingCart": p.ShoppingCart})
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
-	writeUser(w, id, token)
+	return getUser(id, token)
 }
 
-func writeUser(w http.ResponseWriter, id int, token string) {
+func getUser(id int, token string) (interface{}, error) {
 	user, err := SelectUser(id)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	user.Token = token
 
-	WriteJson(w, user)
+	return user, nil
 }

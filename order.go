@@ -25,86 +25,70 @@ type OrderParams struct {
 	Quantity  int `json:"quantity"`
 }
 
-func GetOrders(w http.ResponseWriter, r *http.Request) {
+func GetOrders(r *http.Request) (interface{}, error) {
 	userId, _, ok := FindSession(r)
 	if !ok {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	orders, err := SelectOrderHeads(userId)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	for i := range orders {
 		details, err := getDetails(orders[i].Id)
 		if err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
+			return nil, err
 		}
 
 		orders[i].Details = details
 	}
 
-	WriteJson(w, orders)
+	return orders, nil
 }
 
-func GetOrder(w http.ResponseWriter, r *http.Request) {
+func GetOrder(r *http.Request) (interface{}, error) {
 	userId, _, ok := FindSession(r)
 	if !ok {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	orderId, err := ParseUrlParam(r.URL.Path)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	order, err := SelectOrderHead(orderId)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 	if order.UserId != userId {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	details, err := getDetails(orderId)
 	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
+		return nil, err
 	}
 
 	order.Details = details
 
-	WriteJson(w, order)
+	return order, nil
 }
 
-func PostOrder(w http.ResponseWriter, r *http.Request) {
+func PostOrder(r *http.Request) (interface{}, error) {
 	userId, _, ok := FindSession(r)
 	if !ok {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
 	var params []OrderParams
 	if r.Body == nil || json.NewDecoder(r.Body).Decode(&params) != nil || len(params) == 0 {
-		http.Error(w, "Bad request", http.StatusBadRequest)
-		return
+		return nil, ErrBadRequest
 	}
 
-	orderId, err := InsertOrder(userId, params)
-	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-
-	WriteJson(w, orderId)
+	return InsertOrder(userId, params)
 }
 
 func getDetails(orderId int) ([]OrderDetail, error) {

@@ -63,6 +63,9 @@ func SelectProduct(id int) (*Product, error) {
 
 	var p Product
 	err := row.Scan(&p.Id, &p.Name, &p.Brand, &p.Price, &p.ImageUrl)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -76,6 +79,9 @@ func SelectUser(id int) (*User, error) {
 	var u User
 	var shoppingCart sql.NullString
 	err := row.Scan(&u.Name, &u.Email, &shoppingCart, &u.IsAdmin)
+	if err == sql.ErrNoRows {
+		return nil, ErrBadRequest
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -100,13 +106,16 @@ func AuthUser(id int, email string, password string) (*User, int, error) {
 	var hash string
 	var shoppingCart sql.NullString
 	err := row.Scan(&id, &u.Name, &u.Email, &hash, &shoppingCart, &u.IsAdmin)
+	if err == sql.ErrNoRows {
+		return nil, 0, ErrBadRequest
+	}
 	if err != nil {
 		return nil, 0, err
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, ErrBadRequest
 	}
 
 	if shoppingCart.Valid {
@@ -171,6 +180,9 @@ func SelectOrderHead(id int) (*OrderHead, error) {
 
 	var o OrderHead
 	err := row.Scan(&o.Id, &o.UserId, &o.CreateDate)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
