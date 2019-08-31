@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var (
@@ -16,6 +18,9 @@ var (
 
 type Router struct {
 	entries []entry
+
+	debug bool
+	delay int
 }
 
 type Handlers = map[string]func(*http.Request) (interface{}, error)
@@ -26,47 +31,55 @@ type entry struct {
 	handlers Handlers
 }
 
-func NewRouter() Router {
-	return Router{[]entry{}}
+func NewRouter(debug bool, delay int) Router {
+	return Router{[]entry{}, debug, delay}
 }
 
-func (r *Router) Handle(path string, handlers Handlers) {
-	r.entries = append(r.entries, entry{path, !strings.HasSuffix(path, "/"), handlers})
+func (router *Router) Handle(path string, handlers Handlers) {
+	router.entries = append(router.entries, entry{path, !strings.HasSuffix(path, "/"), handlers})
 }
 
 func (router Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if router.debug {
+		fmt.Printf("%s %s -> ", r.Method, r.URL.Path)
+	}
+
 	for _, e := range router.entries {
 		if (e.exact && r.URL.Path == e.path) || (!e.exact && strings.HasPrefix(r.URL.Path, e.path)) {
 			handler := e.handlers[r.Method]
 			if handler != nil {
 				obj, err := handler(r)
 				if obj != nil && err == nil {
-					writeJson(w, obj)
+					router.writeJson(w, obj)
 				} else {
-					writeError(w, err)
+					router.writeError(w, err)
 				}
 				return
 			}
 
 			if r.Method == http.MethodOptions {
-				writeOptions(w, e)
+				router.writeOptions(w, e)
 				return
 			}
 
-			writeError(w, ErrBadRequest)
+			router.writeError(w, ErrBadRequest)
 			return
 		}
 	}
 
-	writeError(w, ErrNotFound)
+	router.writeError(w, ErrNotFound)
 }
 
-func writeOptions(w http.ResponseWriter, e entry) {
+func (router *Router) writeOptions(w http.ResponseWriter, e entry) {
 	methods := ""
 	for method := range e.handlers {
 		methods += method + ", "
 	}
 	methods += http.MethodOptions
+
+	if router.debug {
+		fmt.Println("OK")
+	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", methods)
@@ -75,11 +88,19 @@ func writeOptions(w http.ResponseWriter, e entry) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func writeJson(w http.ResponseWriter, obj interface{}) {
+func (router *Router) writeJson(w http.ResponseWriter, obj interface{}) {
 	b, err := json.Marshal(obj)
 	if err != nil {
-		writeError(w, err)
+		router.writeError(w, err)
 		return
+	}
+
+	if router.delay > 0 {
+		time.Sleep(time.Duration(router.delay) * time.Millisecond)
+	}
+
+	if router.debug {
+		fmt.Println(string(b))
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -88,7 +109,7 @@ func writeJson(w http.ResponseWriter, obj interface{}) {
 	w.Write(b)
 }
 
-func writeError(w http.ResponseWriter, err error) {
+func (router *Router) writeError(w http.ResponseWriter, err error) {
 	if err == nil {
 		err = ErrUnknown
 	}
@@ -103,6 +124,14 @@ func writeError(w http.ResponseWriter, err error) {
 		status = http.StatusNotFound
 	default:
 		status = http.StatusInternalServerError
+	}
+
+	if router.delay > 0 {
+		time.Sleep(time.Duration(router.delay) * time.Millisecond)
+	}
+
+	if router.debug {
+		fmt.Printf("%d %s\n", status, err.Error())
 	}
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")

@@ -1,11 +1,16 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 	"os"
 )
 
 func main() {
+	debug := flag.Bool("debug", false, "debug mode (display response)")
+	delay := flag.Int("delay", 0, "delay before sending response (ms)")
+	flag.Parse()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "3000"
@@ -18,7 +23,7 @@ func main() {
 
 	InitSession()
 
-	router := NewRouter()
+	router := NewRouter(*debug, *delay)
 
 	router.Handle("/products", Handlers{http.MethodGet: GetProducts})
 	router.Handle("/products/", Handlers{http.MethodGet: GetProduct})
