@@ -28,7 +28,7 @@ type OrderParams struct {
 func GetOrders(r *http.Request) (interface{}, error) {
 	userId, _, ok := FindSession(r)
 	if !ok {
-		return nil, ErrBadRequest
+		return nil, ErrForbidden
 	}
 
 	orders, err := SelectOrderHeads(userId)
@@ -51,7 +51,7 @@ func GetOrders(r *http.Request) (interface{}, error) {
 func GetOrder(r *http.Request) (interface{}, error) {
 	userId, _, ok := FindSession(r)
 	if !ok {
-		return nil, ErrBadRequest
+		return nil, ErrForbidden
 	}
 
 	orderId, err := ParseUrlParam(r.URL.Path)
@@ -80,7 +80,7 @@ func GetOrder(r *http.Request) (interface{}, error) {
 func PostOrder(r *http.Request) (interface{}, error) {
 	userId, _, ok := FindSession(r)
 	if !ok {
-		return nil, ErrBadRequest
+		return nil, ErrForbidden
 	}
 
 	var params []OrderParams

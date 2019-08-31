@@ -9,6 +9,7 @@ import (
 
 var (
 	ErrBadRequest = errors.New("Bad request")
+	ErrForbidden  = errors.New("Forbidden")
 	ErrNotFound   = errors.New("Not found")
 	ErrUnknown    = errors.New("Unknown error")
 )
@@ -96,6 +97,8 @@ func writeError(w http.ResponseWriter, err error) {
 	switch err {
 	case ErrBadRequest:
 		status = http.StatusBadRequest
+	case ErrForbidden:
+		status = http.StatusForbidden
 	case ErrNotFound:
 		status = http.StatusNotFound
 	default:

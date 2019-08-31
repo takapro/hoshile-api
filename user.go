@@ -63,7 +63,7 @@ func UserSignup(r *http.Request) (interface{}, error) {
 func GetProfile(r *http.Request) (interface{}, error) {
 	id, token, ok := FindSession(r)
 	if !ok {
-		return nil, ErrBadRequest
+		return nil, ErrForbidden
 	}
 
 	return getUser(id, token)
@@ -72,7 +72,7 @@ func GetProfile(r *http.Request) (interface{}, error) {
 func PutProfile(r *http.Request) (interface{}, error) {
 	id, token, ok := FindSession(r)
 	if !ok {
-		return nil, ErrBadRequest
+		return nil, ErrForbidden
 	}
 
 	var p userParams
@@ -91,7 +91,7 @@ func PutProfile(r *http.Request) (interface{}, error) {
 func PutPassword(r *http.Request) (interface{}, error) {
 	id, token, ok := FindSession(r)
 	if !ok {
-		return nil, ErrBadRequest
+		return nil, ErrForbidden
 	}
 
 	var p passwordParams
@@ -120,9 +120,9 @@ func PutPassword(r *http.Request) (interface{}, error) {
 }
 
 func PutShoppingCart(r *http.Request) (interface{}, error) {
-	id, token, ok := FindSession(r)
+	id, _, ok := FindSession(r)
 	if !ok {
-		return nil, ErrBadRequest
+		return nil, ErrForbidden
 	}
 
 	var p shoppingCartParams
@@ -135,7 +135,7 @@ func PutShoppingCart(r *http.Request) (interface{}, error) {
 		return nil, err
 	}
 
-	return getUser(id, token)
+	return true, nil
 }
 
 func getUser(id int, token string) (interface{}, error) {
